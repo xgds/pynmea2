@@ -6,9 +6,9 @@ import datetime
 from decimal import Decimal
 
 def test_GGA():
-    data = "$GPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,100.00,M,-33.9,M,,0000*6D"
+    data = "$PPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,100.00,M,-33.9,M,,0000*7A"
     msg = pynmea2.parse(data)
-    assert msg.talker == 'GP'
+    assert msg.talker == 'PP'
     assert msg.sentence_type == 'GGA'
     assert isinstance(msg, pynmea2.GGA)
 
@@ -43,7 +43,7 @@ def test_GGA():
     assert msg.is_valid == True
 
     msg.altitude = 200.0
-    assert str(msg) == "$GPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,200.0,M,-33.9,M,,0000*5E"
+    assert str(msg) == "$PPGGA,184353.07,1929.045,S,02410.506,E,1,04,2.6,200.0,M,-33.9,M,,0000*49"
 
 def test_RTE():
     data = "$GPRTE,2,1,c,0,PBRCPK,PBRTO,PTELGR,PPLAND,PYAMBU,PPFAIR,PWARRN,PMORTL,PLISMR*73"

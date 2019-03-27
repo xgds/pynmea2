@@ -50,15 +50,16 @@ class NMEASentence(NMEASentenceBase):
             # sentence type identifier
             (?P<sentence_type>
 
-                # proprietary sentence
-                (P\w{3})|
-
                 # query sentence, ie: 'CCGPQ,GGA'
                 # NOTE: this should have no data
                 (\w{2}\w{2}Q,\w{3})|
 
-                # taker sentence, ie: 'GPGGA'
-                (\w{2}\w{3},)
+                # talker sentence, ie: 'GPGGA'
+                (\w{2}\w{3},)|
+
+                # proprietary sentence
+                (P\w{3})
+
             )
 
             # rest of message
@@ -68,6 +69,23 @@ class NMEASentence(NMEASentenceBase):
         # checksum: *HH
         (?:[*](?P<checksum>[A-F0-9]{2}))?
 
+        # optional trailing whitespace
+        \s*[\r\n]*$
+        ''', re.X | re.IGNORECASE)
+
+    ptalker_sentence_re = re.compile(r'''
+        ^\s*\$?
+        (?P<nmea_str>
+            # sentence type identifier
+            (?P<sentence_type>
+                # proprietary sentence
+                (P\w{3})
+            )
+            # rest of message
+            (?P<data>[^*]*)
+        )
+        # checksum: *HH
+        (?:[*](?P<checksum>[A-F0-9]{2}))?
         # optional trailing whitespace
         \s*[\r\n]*$
         ''', re.X | re.IGNORECASE)
@@ -125,9 +143,22 @@ class NMEASentence(NMEASentenceBase):
             cls = TalkerSentence.sentence_types.get(sentence)
 
             if not cls:
-                # TODO instantiate base type instead of fail
-                raise SentenceTypeError(
-                    'Unknown sentence type %s' % sentence_type, line)
+                match = NMEASentence.ptalker_sentence_re.match(line)
+                if match:
+                    nmea_str = match.group('nmea_str')
+                    data_str = match.group('data')
+                    checksum = match.group('checksum')
+                    sentence_type = match.group('sentence_type').upper()
+                    data = data_str.split(',')
+                    proprietary_match = NMEASentence.proprietary_re.match(sentence_type)
+                    if proprietary_match:
+                        manufacturer = proprietary_match.group('manufacturer')
+                        cls = ProprietarySentence.sentence_types.get(manufacturer, ProprietarySentence)
+                        return cls(manufacturer, data)
+                else:
+                    # TODO instantiate base type instead of fail
+                    raise SentenceTypeError(
+                        'Unknown sentence type %s' % sentence_type, line)
             return cls(talker, sentence, data)
 
         query_match = NMEASentence.query_re.match(sentence_type)
